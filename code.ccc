@@ -1,0 +1,219 @@
+#include <Wire.h>
+#include <LiquidCrystal_I2C.h>
+#include <IRremote.h>
+#include <Servo.h> 
+
+LiquidCrystal_I2C lcd(0x27, 16, 2);
+
+// Pin Definitions
+const int ir = 8;
+const int soil_sensor = A0;
+const int relay = 7;
+
+int motorA_IN1 = 9;
+int motorA_IN2 = 10;
+int motorB_IN3 = 11;
+int motorB_IN4 = 12;
+int motorA_PWM = 3;
+int motorB_PWM = 5;
+Servo myServo;
+
+int led_pin1 = 13;
+int led_pin2 = 6;
+int lastCommand = 0;
+int motorSPD = 226;
+
+
+void setup(){
+   Serial.begin(9600);
+   IrReceiver.begin(ir);
+   pinMode(motorA_IN1, OUTPUT);
+   pinMode(motorA_IN2, OUTPUT);
+   pinMode(motorB_IN3, OUTPUT);
+   pinMode(motorB_IN4, OUTPUT);
+   pinMode(motorA_PWM, OUTPUT);
+   pinMode(motorB_PWM, OUTPUT);
+   pinMode(led_pin1, OUTPUT);
+   pinMode(led_pin2, OUTPUT);
+   pinMode(relay, OUTPUT);
+   pinMode(soil_sensor, INPUT);
+  myServo.attach(2); 
+  
+  lcd.init();
+  lcd.backlight();
+  
+  lcd.setCursor(0,0);
+  lcd.print("syetem is ready");
+    
+  delay(1000);
+  lcd.clear();
+  
+  
+}
+
+void loop(){
+  int data = analogRead(soil_sensor);
+  int moisture = map(data, 0, 876, 100, 0);
+  lcd.setCursor(0, 0);
+  lcd.print("Moisture: ");
+  lcd.setCursor(9,0);
+    lcd.print(moisture);
+    lcd.print("% ");
+  delay(1000);
+  
+  
+  Serial.println("Soil Moisture: ");
+   
+  
+  Serial.print(moisture);
+  Serial.println("%");
+
+  if (moisture < 15) {
+    digitalWrite(relay, HIGH);
+    digitalWrite(led_pin1, HIGH);
+    digitalWrite(led_pin2, LOW); // Turn off the other LED
+    lcd.clear();
+    lcd.setCursor(0, 0);
+    lcd.print("pump on");
+    delay(1000);
+    
+    
+  
+} else {
+    digitalWrite(relay, LOW);
+    digitalWrite(led_pin1, LOW);
+    digitalWrite(led_pin2, HIGH);
+    lcd.setCursor(9, 0);
+    lcd.print("        "); // Clears old text
+    lcd.setCursor(9, 0);
+    lcd.print(moisture);
+    lcd.print("%");
+    delay(1000);
+     lcd.clear();
+    lcd.setCursor(0, 0);
+    lcd.print("pump off");
+    delay(1000);
+    
+    
+}
+
+delay(500); // Uniform delay for smooth LCD updates
+  
+  if (IrReceiver.decode()){
+    int button = IrReceiver.decodedIRData.command;
+    Serial.println("remote button :");
+    Serial.println(button);
+    IrReceiver.resume();
+    lastCommand = button;
+    
+    
+    if (button == 1 ) {
+      forward();    
+    }
+    if (button == 9) {
+      backward();    
+    }
+    if (button ==4 ) { 
+      left();    
+    }
+    if (button == 6) { 
+      right();    
+    }
+    if (button == 5 ) {  
+      stop();    
+    }
+    if (button == 16) { 
+      myServo.write(0); 
+        } 
+    if (button == 17) {  
+      myServo.write(90);
+  }
+  
+  }
+}
+
+void forward(){
+
+  analogWrite(motorA_PWM,255);
+  analogWrite(motorB_PWM,255);
+
+  digitalWrite(motorA_IN1, HIGH);
+  digitalWrite(motorA_IN2, LOW);
+
+  digitalWrite(motorB_IN3, HIGH);
+  digitalWrite(motorB_IN4, LOW);
+  digitalWrite(led_pin1 ,HIGH);
+  lcd.setCursor(0,1);
+  
+  lcd.print("                ");
+  
+  lcd.setCursor(0,1);
+  lcd.print("Robot Speed:");
+
+  lcd.print("FWD");
+  delay(2000);
+
+}
+
+
+void backward(){
+
+  digitalWrite(motorA_IN1, LOW);
+  digitalWrite(motorA_IN2, HIGH);
+
+  digitalWrite(motorB_IN3, LOW);
+  digitalWrite(motorB_IN4, HIGH);
+  digitalWrite(led_pin2 ,HIGH);
+  lcd.setCursor(0,1);
+  lcd.print("robot speed:");
+  lcd.setCursor(12,1);
+  lcd.print("BWD");
+  delay(2000);
+
+}
+
+
+void right() {
+  digitalWrite(motorA_IN1, LOW);
+  digitalWrite(motorA_IN2, HIGH);
+
+  digitalWrite(motorB_IN3, HIGH);
+  digitalWrite(motorB_IN4, LOW);
+  digitalWrite(led_pin1 ,HIGH);
+  lcd.setCursor(0,1);
+  lcd.print(" robot turn:");
+ 
+  lcd.print("right");
+  delay(2000);
+
+}
+
+
+void left() {
+  digitalWrite(motorA_IN1, HIGH);
+  digitalWrite(motorA_IN2, LOW);
+
+  digitalWrite(motorB_IN3, LOW);
+  digitalWrite(motorB_IN4, HIGH);
+  digitalWrite(led_pin1 ,HIGH);
+
+  lcd.setCursor(0,1);
+  lcd.print("robot turn:");
+  lcd.setCursor(12,1);
+  lcd.print("left");
+  delay(2000);
+
+}
+void stop() {
+  digitalWrite(motorA_IN1, LOW);
+  digitalWrite(motorA_IN2, LOW);
+
+  digitalWrite(motorB_IN3, LOW);
+  digitalWrite(motorB_IN4, LOW);
+  
+  lcd.setCursor(0,1);
+  lcd.print("robot speed:");
+  lcd.setCursor(12,1);
+  lcd.print("idle");
+  delay(2000);
+}
